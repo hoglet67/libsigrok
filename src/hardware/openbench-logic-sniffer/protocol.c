@@ -101,6 +101,7 @@ SR_PRIV int ols_convert_trigger(const struct sr_dev_inst *sdi)
 	for (i = 0; i < NUM_TRIGGER_STAGES; i++) {
 		devc->trigger_mask[i] = 0;
 		devc->trigger_value[i] = 0;
+		devc->trigger_edge[i] = 0;
 	}
 
 	if (!(trigger = sr_session_trigger_get(sdi->session)))
@@ -121,8 +122,10 @@ SR_PRIV int ols_convert_trigger(const struct sr_dev_inst *sdi)
 				/* Ignore disabled channels with a trigger. */
 				continue;
 			devc->trigger_mask[stage->stage] |= 1 << match->channel->index;
-			if (match->match == SR_TRIGGER_ONE)
+			if (match->match == SR_TRIGGER_ONE || match->match == SR_TRIGGER_RISING)
 				devc->trigger_value[stage->stage] |= 1 << match->channel->index;
+			if (match->match == SR_TRIGGER_RISING || match->match == SR_TRIGGER_FALLING)
+				devc->trigger_edge[stage->stage] |= 1 << match->channel->index;
 		}
 	}
 

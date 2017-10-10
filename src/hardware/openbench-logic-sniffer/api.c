@@ -36,8 +36,8 @@ static const uint32_t devopts[] = {
 	SR_CONF_SAMPLERATE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 	SR_CONF_TRIGGER_MATCH | SR_CONF_LIST,
 	SR_CONF_CAPTURE_RATIO | SR_CONF_GET | SR_CONF_SET,
-	SR_CONF_EXTERNAL_CLOCK | SR_CONF_GET | SR_CONF_SET,
 	SR_CONF_PATTERN_MODE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+	SR_CONF_EXTERNAL_CLOCK | SR_CONF_GET | SR_CONF_SET,
 	SR_CONF_SWAP | SR_CONF_SET,
 	SR_CONF_RLE | SR_CONF_GET | SR_CONF_SET,
 };
@@ -45,6 +45,8 @@ static const uint32_t devopts[] = {
 static const int32_t trigger_matches[] = {
 	SR_TRIGGER_ZERO,
 	SR_TRIGGER_ONE,
+	SR_TRIGGER_RISING,
+	SR_TRIGGER_FALLING,
 };
 
 #define STR_PATTERN_NONE     "None"
@@ -391,6 +393,14 @@ static int set_trigger(const struct sr_dev_inst *sdi, int stage)
 	if (stage == devc->num_stages)
 		/* Last stage, fire when this one matches. */
 		arg[3] |= TRIGGER_START;
+	if (send_longcommand(serial, cmd, arg) != SR_OK)
+		return SR_ERR;
+
+	cmd = CMD_SET_TRIGGER_EDGE + stage * 4;
+	arg[0] = devc->trigger_edge[stage] & 0xff;
+	arg[1] = (devc->trigger_edge[stage] >> 8) & 0xff;
+	arg[2] = (devc->trigger_edge[stage] >> 16) & 0xff;
+	arg[3] = (devc->trigger_edge[stage] >> 24) & 0xff;
 	if (send_longcommand(serial, cmd, arg) != SR_OK)
 		return SR_ERR;
 

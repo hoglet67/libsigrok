@@ -47,6 +47,7 @@
 #define CMD_SET_TRIGGER_MASK       0xc0
 #define CMD_SET_TRIGGER_VALUE      0xc1
 #define CMD_SET_TRIGGER_CONFIG     0xc2
+#define CMD_SET_TRIGGER_EDGE       0xc3
 
 /* Trigger config */
 #define TRIGGER_START              (1 << 3)
@@ -80,6 +81,7 @@ struct dev_context {
 	uint32_t channel_mask;
 	uint32_t trigger_mask[NUM_TRIGGER_STAGES];
 	uint32_t trigger_value[NUM_TRIGGER_STAGES];
+	uint32_t trigger_edge[NUM_TRIGGER_STAGES];
 	int num_stages;
 	uint16_t flag_reg;
 
