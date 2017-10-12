@@ -38,6 +38,7 @@ static const uint32_t devopts[] = {
 	SR_CONF_CAPTURE_RATIO | SR_CONF_GET | SR_CONF_SET,
 	SR_CONF_PATTERN_MODE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 	SR_CONF_EXTERNAL_CLOCK | SR_CONF_GET | SR_CONF_SET,
+	SR_CONF_CLOCK_EDGE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 	SR_CONF_SWAP | SR_CONF_SET,
 	SR_CONF_RLE | SR_CONF_GET | SR_CONF_SET,
 };
@@ -47,6 +48,17 @@ static const int32_t trigger_matches[] = {
 	SR_TRIGGER_ONE,
 	SR_TRIGGER_RISING,
 	SR_TRIGGER_FALLING,
+};
+
+/** Edge choices for the external clock inputs. */
+enum signal_edge {
+	EDGE_POSITIVE = 0,
+	EDGE_NEGATIVE,
+};
+
+static const char *signal_edges[] = {
+	[EDGE_POSITIVE] = "r",
+	[EDGE_NEGATIVE] = "f",
 };
 
 #define STR_PATTERN_NONE     "None"
@@ -193,6 +205,7 @@ static int config_get(uint32_t key, GVariant **data,
 	const struct sr_dev_inst *sdi, const struct sr_channel_group *cg)
 {
 	struct dev_context *devc;
+	unsigned int idx;
 
 	(void)cg;
 
@@ -225,6 +238,13 @@ static int config_get(uint32_t key, GVariant **data,
 	case SR_CONF_EXTERNAL_CLOCK:
 		*data = g_variant_new_boolean(devc->flag_reg & FLAG_CLOCK_EXTERNAL ? TRUE : FALSE);
 		break;
+	case SR_CONF_CLOCK_EDGE:
+		idx = devc->flag_reg & FLAG_SLOPE_FALLING ? 1 : 0;
+		if (idx >= ARRAY_SIZE(signal_edges))
+			return SR_ERR_BUG;
+		*data = g_variant_new_string(signal_edges[idx]);
+		break;
+
 	default:
 		return SR_ERR_NA;
 	}
@@ -239,6 +259,7 @@ static int config_set(uint32_t key, GVariant *data,
 	uint16_t flag;
 	uint64_t tmp_u64;
 	const char *stropt;
+	int idx;
 
 	(void)cg;
 
@@ -266,6 +287,17 @@ static int config_set(uint32_t key, GVariant *data,
 		} else {
 			sr_info("Disabled external clock.");
 			devc->flag_reg &= ~FLAG_CLOCK_EXTERNAL;
+		}
+		break;
+	case SR_CONF_CLOCK_EDGE:
+		if ((idx = std_str_idx(data, ARRAY_AND_SIZE(signal_edges))) < 0)
+			return SR_ERR_ARG;
+		if (idx) {
+			sr_info("External edge falling.");
+			devc->flag_reg |= FLAG_SLOPE_FALLING;
+		} else {
+			sr_info("External edge rising.");
+			devc->flag_reg &= ~FLAG_SLOPE_FALLING;
 		}
 		break;
 	case SR_CONF_PATTERN_MODE:
@@ -331,6 +363,9 @@ static int config_list(uint32_t key, GVariant **data,
 		break;
 	case SR_CONF_PATTERN_MODE:
 		*data = g_variant_new_strv(ARRAY_AND_SIZE(patterns));
+		break;
+	case SR_CONF_CLOCK_EDGE:
+		*data = g_variant_new_strv(ARRAY_AND_SIZE(signal_edges));
 		break;
 	case SR_CONF_LIMIT_SAMPLES:
 		if (!sdi)
