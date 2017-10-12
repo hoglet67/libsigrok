@@ -301,13 +301,15 @@ SR_PRIV int ols_set_samplerate(const struct sr_dev_inst *sdi,
 	if (samplerate > CLOCK_RATE) {
 		sr_info("Enabling demux mode.");
 		devc->flag_reg |= FLAG_DEMUX;
-		devc->flag_reg &= ~FLAG_FILTER;
+//		dmb: Allow manual control of noise filter in all modes
+//		devc->flag_reg &= ~FLAG_FILTER;
 		devc->max_channels = NUM_CHANNELS / 2;
 		devc->cur_samplerate_divider = (CLOCK_RATE * 2 / samplerate) - 1;
 	} else {
 		sr_info("Disabling demux mode.");
 		devc->flag_reg &= ~FLAG_DEMUX;
-		devc->flag_reg |= FLAG_FILTER;
+//		dmb: Allow manual control of noise filter in all modes
+//		devc->flag_reg |= FLAG_FILTER;
 		devc->max_channels = NUM_CHANNELS;
 		devc->cur_samplerate_divider = (CLOCK_RATE / samplerate) - 1;
 	}

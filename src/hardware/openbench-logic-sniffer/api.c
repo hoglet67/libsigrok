@@ -39,6 +39,7 @@ static const uint32_t devopts[] = {
 	SR_CONF_PATTERN_MODE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
 	SR_CONF_EXTERNAL_CLOCK | SR_CONF_GET | SR_CONF_SET,
 	SR_CONF_CLOCK_EDGE | SR_CONF_GET | SR_CONF_SET | SR_CONF_LIST,
+	SR_CONF_FILTER | SR_CONF_GET | SR_CONF_SET,
 	SR_CONF_SWAP | SR_CONF_SET,
 	SR_CONF_RLE | SR_CONF_GET | SR_CONF_SET,
 };
@@ -238,6 +239,9 @@ static int config_get(uint32_t key, GVariant **data,
 	case SR_CONF_EXTERNAL_CLOCK:
 		*data = g_variant_new_boolean(devc->flag_reg & FLAG_CLOCK_EXTERNAL ? TRUE : FALSE);
 		break;
+	case SR_CONF_FILTER:
+		*data = g_variant_new_boolean(devc->flag_reg & FLAG_FILTER ? TRUE : FALSE);
+		break;
 	case SR_CONF_CLOCK_EDGE:
 		idx = devc->flag_reg & FLAG_SLOPE_FALLING ? 1 : 0;
 		if (idx >= ARRAY_SIZE(signal_edges))
@@ -287,6 +291,15 @@ static int config_set(uint32_t key, GVariant *data,
 		} else {
 			sr_info("Disabled external clock.");
 			devc->flag_reg &= ~FLAG_CLOCK_EXTERNAL;
+		}
+		break;
+	case SR_CONF_FILTER:
+		if (g_variant_get_boolean(data)) {
+			sr_info("Enabling noise filter.");
+			devc->flag_reg |= FLAG_FILTER;
+		} else {
+			sr_info("Disabled noise filter.");
+			devc->flag_reg &= ~FLAG_FILTER;
 		}
 		break;
 	case SR_CONF_CLOCK_EDGE:
