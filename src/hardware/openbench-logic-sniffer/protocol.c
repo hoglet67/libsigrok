@@ -60,10 +60,73 @@ SR_PRIV int send_longcommand(struct sr_serial_dev_inst *serial,
 SR_PRIV int ols_send_reset(struct sr_serial_dev_inst *serial)
 {
 	unsigned int i;
+	int ret;
+	char buf[8];
 
+	// Send the reset command
 	for (i = 0; i < 5; i++) {
 		if (send_shortcommand(serial, CMD_RESET) != SR_OK)
 			return SR_ERR;
+	}
+
+	// Sometimes this can result in junk being spewed out,
+	// esp. if in RLE mode, so wait and flush
+	g_usleep(RESPONSE_DELAY_US * 10);
+
+	// Flush the serial ports
+	serial_flush(serial);
+
+	// This should never be needed, but the above flush doesn't seem to work
+	i = 0;
+	while (sp_input_waiting(serial->data)) {
+		ret = serial_read_blocking(serial, buf, 1, serial_timeout(serial, 1));
+		i++;
+		if (ret == 1) {
+			sr_spew("Flushing byte: <%02x>", buf[0]); 
+		} else {
+			sr_spew("No data to flush"); 
+		}
+	}
+  
+	sr_info("reset: flushed %d stale bytes", i);
+
+	send_shortcommand(serial, CMD_ID);
+
+	g_usleep(RESPONSE_DELAY_US);
+
+	if (sp_input_waiting(serial->data) == 0) {
+		sr_dbg("Didn't get any reply.");
+		return SR_ERR;
+	}
+
+	// Skip any junk, upto the first '1'
+	i = 0;
+	do {
+		ret = serial_read_blocking(serial, buf, 1, serial_timeout(serial, 1));
+		if (ret == '1' && buf[0] != '1') {
+			sr_dbg("Skipping junk: <%02x>", buf[0]);
+			i++;
+		}
+	} while (ret == 1 && buf[0] != '1');
+
+	sr_info("reset: skipped %d stale bytes", i);
+
+	if (ret != 1) {
+		sr_err("Invalid reply (expected 1 bytes, got %d).", ret); 
+		return SR_ERR;
+	}
+	
+	ret = serial_read_blocking(serial, buf, 3, serial_timeout(serial, 3));
+	
+	if (ret != 3) {
+		sr_err("Invalid reply (expected 3 bytes, got %d).", ret);
+		return SR_ERR;
+	}
+		
+	if (strncmp(buf, "SLO", 3) && strncmp(buf, "ALS", 3)) {
+		sr_err("Invalid reply (expected 'SLO' or 'ALS', got "
+				 "<%02x> <%02x> <%02x>).", buf[0], buf[1], buf[2]);
+		return SR_ERR;		  
 	}
 
 	return SR_OK;

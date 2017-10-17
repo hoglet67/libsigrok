@@ -26,6 +26,8 @@
 #include <libsigrok/libsigrok.h>
 #include "libsigrok-internal.h"
 
+#define RESPONSE_DELAY_US (10 * 1000)
+
 #define LOG_PREFIX "openbench-logic-sniffer"
 
 #define NUM_CHANNELS               32

@@ -98,18 +98,14 @@ static const uint64_t samplerates[] = {
 	SR_HZ(1),
 };
 
-#define RESPONSE_DELAY_US (10 * 1000)
-
 static GSList *scan(struct sr_dev_driver *di, GSList *options)
 {
 	struct sr_config *src;
 	struct sr_dev_inst *sdi;
 	struct sr_serial_dev_inst *serial;
 	GSList *l;
-	int ret;
 	unsigned int i;
 	const char *conn, *serialcomm;
-	char buf[8];
 
 	conn = serialcomm = NULL;
 	for (l = options; l; l = l->next) {
@@ -144,26 +140,6 @@ static GSList *scan(struct sr_dev_driver *di, GSList *options)
 	if (ols_send_reset(serial) != SR_OK) {
 		serial_close(serial);
 		sr_err("Could not use port %s. Quitting.", conn);
-		return NULL;
-	}
-	send_shortcommand(serial, CMD_ID);
-
-	g_usleep(RESPONSE_DELAY_US);
-
-	if (sp_input_waiting(serial->data) == 0) {
-		sr_dbg("Didn't get any reply.");
-		return NULL;
-	}
-
-	ret = serial_read_blocking(serial, buf, 4, serial_timeout(serial, 4));
-	if (ret != 4) {
-		sr_err("Invalid reply (expected 4 bytes, got %d).", ret);
-		return NULL;
-	}
-
-	if (strncmp(buf, "1SLO", 4) && strncmp(buf, "1ALS", 4)) {
-		sr_err("Invalid reply (expected '1SLO' or '1ALS', got "
-		       "'%c%c%c%c').", buf[0], buf[1], buf[2], buf[3]);
 		return NULL;
 	}
 
@@ -524,15 +500,15 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 		sr_err("Failed to configure channels.");
 		return SR_ERR;
 	}
-	if (devc->num_stages > 0) {
-		/*
-		 * According to http://mygizmos.org/ols/Logic-Sniffer-FPGA-Spec.pdf
-		 * reset command must be send prior each arm command
-		 */
-		sr_dbg("Send reset command before trigger configure");
-		if (ols_send_reset(serial) != SR_OK)
-			return SR_ERR;
+	/*
+	 * According to http://mygizmos.org/ols/Logic-Sniffer-FPGA-Spec.pdf
+	 * reset command must be send prior each arm command
+	 */
+	sr_dbg("Send reset command before trigger configure");
+	if (ols_send_reset(serial) != SR_OK)
+		return SR_ERR;
 
+	if (devc->num_stages > 0) {
 		delaycount = readcount * (1 - devc->capture_ratio / 100.0);
 		devc->trigger_at = (readcount - delaycount) * 4 - devc->num_stages;
 		for (i = 0; i < NUM_TRIGGER_STAGES; i++) {
