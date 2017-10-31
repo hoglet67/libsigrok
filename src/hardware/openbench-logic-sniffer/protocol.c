@@ -71,7 +71,7 @@ SR_PRIV int ols_send_reset(struct sr_serial_dev_inst *serial)
 
 	// Sometimes this can result in junk being spewed out,
 	// esp. if in RLE mode, so wait and flush
-	g_usleep(RESPONSE_DELAY_US * 10);
+	g_usleep(RESPONSE_DELAY_US);
 
 	// Flush the serial ports
 	serial_flush(serial);

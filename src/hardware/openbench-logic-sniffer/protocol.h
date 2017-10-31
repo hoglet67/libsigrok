@@ -26,7 +26,8 @@
 #include <libsigrok/libsigrok.h>
 #include "libsigrok-internal.h"
 
-#define RESPONSE_DELAY_US (10 * 1000)
+// Note, in Ubuntu 16.04 a delay of 10ms caused unreliablility
+#define RESPONSE_DELAY_US (100 * 1000)
 
 #define LOG_PREFIX "openbench-logic-sniffer"
 
